@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
 import UniShowcase from "../../components/UniShowcase";
 import { useTranslation } from "react-i18next";
@@ -8,31 +8,51 @@ import { bino, kesim, season, semestr } from "./mock";
 import { useSchuldeContext } from "../../context/SchuldeContext";
 import ScheduleContent from "./schedule-content";
 
+const filterOption = (input, option) =>
+  option.label?.toLowerCase().includes(input?.toLowerCase());
+
 const Schulde = () => {
   const { t } = useTranslation();
   const { schulde, setSchulde } = useSchuldeContext();
-  const [token, setToken] = useState("");
   const [loading, setLoading] = useState(false);
+  const token = import.meta.env.VITE_CAPCHA_TOKEN;
 
-  const getToken = async () => {
+  const [faculty, setFaculty] = useState([]);
+  const [facultyValue, setFacultyValue] = useState(null);
+
+  const [groups, setGroups] = useState([]);
+
+  const getFacultyOptions = async () => {
     await fetch(
-      `${import.meta.env.VITE_BASE_URL_API}/Tokens/sitegetbyidtokens/1`,
+      `${
+        import.meta.env.VITE_BASE_URL_API
+      }/hemisapicontroller/data/departments-list?active=1&_structure_type=11`,
       {
         headers: {
-          Authorization: `Bearer ${import.meta.env.VITE_CAPCHA_TOKEN}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
       }
     )
       .then((res) => res.json())
-      .then((res) => {
-        setToken(res.token);
-        Cookies.set("hemis_token", res.token);
-      });
+      .then((res) => setFaculty(res.data?.items));
   };
 
-  useEffect(() => {
-    getToken();
-  }, []);
+  const getGroups = async () => {
+    await fetch(
+      `${
+        import.meta.env.VITE_BASE_URL_API
+      }/hemisapicontroller/data/groups-list?active=1&_structure_type=11`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    )
+      .then((res) => res.json())
+      .then((res) => console.log(res));
+  };
 
   const onGenerate = async () => {
     setLoading(true);
@@ -40,6 +60,29 @@ const Schulde = () => {
       setLoading(false);
     }, 500);
   };
+
+  useEffect(() => {
+    getFacultyOptions();
+    getGroups();
+  }, []);
+
+  const facultyOptions = useMemo(() => {
+    if (!faculty)
+      return [
+        {
+          value: "0",
+          label: "Fakultet tanlang",
+        },
+      ];
+    return faculty.map((item) => ({
+      value: item.id,
+      label: item.name,
+    }));
+  }, [faculty]);
+
+  useEffect(() => {
+    setFacultyValue(facultyOptions[0]?.value);
+  }, [facultyOptions]);
 
   return (
     <div>
@@ -64,7 +107,18 @@ const Schulde = () => {
             {(schulde === "0" || schulde === "1") && (
               <div className="form-item">
                 <label htmlFor="fak">Fakultetlar</label>
-                <Select className="full" id="fak" options={season} />
+                <Select
+                  className="full"
+                  id="fak"
+                  options={facultyOptions}
+                  value={
+                    facultyValue || { value: "0", label: "Yuklanmoqda..." }
+                  }
+                  onChange={(e) => setFacultyValue(e)}
+                  optionFilterProp="label"
+                  showSearch
+                  filterOption={filterOption}
+                />
               </div>
             )}
             {schulde === "2" && (
@@ -75,19 +129,35 @@ const Schulde = () => {
                   id="bino"
                   options={bino}
                   defaultValue={"1"}
+                  optionFilterProp="label"
+                  showSearch
+                  filterOption={filterOption}
                 />
               </div>
             )}
             {schulde === "2" && (
               <div className="form-item">
                 <label htmlFor="xona">Xona</label>
-                <Select className="full" id="xona" options={season} />
+                <Select
+                  className="full"
+                  id="xona"
+                  options={season}
+                  showSearch
+                  filterSort={filterSort}
+                />
               </div>
             )}
             {schulde === "1" && (
               <div className="form-item">
                 <label htmlFor="kaf">Kafedralar</label>
-                <Select className="full" id="kaf" options={season} />
+                <Select
+                  className="full"
+                  id="kaf"
+                  options={season}
+                  optionFilterProp="label"
+                  showSearch
+                  filterOption={filterOption}
+                />
               </div>
             )}
             {schulde === "1" && (
@@ -109,9 +179,13 @@ const Schulde = () => {
             {schulde === "0" && (
               <div className="form-item">
                 <label htmlFor="group">Gruh</label>
-                <Select className="full" id="group">
-                  <Select.Option value="1">1</Select.Option>
-                </Select>
+                <Select
+                  className="full"
+                  id="group"
+                  optionFilterProp="label"
+                  showSearch
+                  filterOption={filterOption}
+                />
               </div>
             )}
             {schulde === "0" && (
