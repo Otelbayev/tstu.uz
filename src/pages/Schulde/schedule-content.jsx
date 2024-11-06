@@ -64,7 +64,7 @@ const ScheduleContent = ({ loading, setLoading }) => {
         </Button>
       </Flex>
       <div ref={captureRef}>
-        <Row style={{ padding: "20px 0" }} gutter={[10, 10]}>
+        <Row style={{ padding: "20px" }} gutter={[10, 10]}>
           <Col span={8}>
             <Card
               title="Dushanba"
